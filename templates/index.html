@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SAkshi GPT</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      display: flex;
+      height: 100vh;
+    }
+
+    .sidebar {
+      width: 260px;
+      background-color: #202123;
+      color: white;
+      padding: 20px;
+      box-sizing: border-box;
+      overflow-y: auto;
+    }
+
+    .sidebar h2 {
+      margin-top: 0;
+      font-size: 20px;
+      margin-bottom: 10px;
+    }
+
+    .sidebar ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    .sidebar ul li {
+      margin: 10px 0;
+      cursor: pointer;
+      padding: 5px 10px;
+      border-radius: 5px;
+      background-color: #343541;
+    }
+
+    .sidebar ul li:hover {
+      background-color: #3e3f4b;
+    }
+
+    .chat-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      background-color: #f5f5f5;
+    }
+
+    .chat-box {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+    }
+
+    .message {
+      margin-bottom: 15px;
+      max-width: 70%;
+    }
+
+    .user .text {
+      background-color: #007bff;
+      color: white;
+      border-radius: 15px 15px 0 15px;
+      padding: 10px 15px;
+      align-self: flex-end;
+    }
+
+    .assistant .text {
+      background-color: #e0e0e0;
+      border-radius: 15px 15px 15px 0;
+      padding: 10px 15px;
+      align-self: flex-start;
+    }
+
+    .input-container {
+      display: flex;
+      padding: 15px;
+      background-color: white;
+      border-top: 1px solid #ccc;
+    }
+
+    .input-container input {
+      flex: 1;
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 20px;
+      border: 1px solid #ccc;
+    }
+
+    .input-container button {
+      padding: 10px 20px;
+      margin-left: 10px;
+      border-radius: 20px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="sidebar">
+    <h2>Chat History</h2>
+    <ul id="historyList"></ul>
+  </div>
+
+  <div class="chat-container">
+    <div class="chat-box" id="chat"></div>
+
+    <form id="inputForm" class="input-container">
+      <input type="text" id="inputText" placeholder="Send a message..." autocomplete="off">
+      <button type="submit">Send</button>
+    </form>
+  </div>
+
+  <script>
+    const chatEl = document.getElementById('chat');
+    const form = document.getElementById('inputForm');
+    const input = document.getElementById('inputText');
+    const historyList = document.getElementById('historyList');
+
+    function appendMessage(role, text) {
+      const div = document.createElement('div');
+      div.className = 'message ' + role;
+      const span = document.createElement('div');
+      span.className = 'text';
+      span.textContent = text;
+      div.appendChild(span);
+      chatEl.appendChild(div);
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
+
+    function addToHistory(question) {
+      const li = document.createElement('li');
+      li.textContent = question;
+      li.onclick = () => {
+        input.value = question;
+        input.focus();
+      };
+      historyList.appendChild(li);
+    }
+
+    async function loadChat() {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: '' })
+      });
+      const { history } = await res.json();
+      history.forEach(msg => {
+        appendMessage(msg.role, msg.text);
+        if (msg.role === 'user') addToHistory(msg.text);
+      });
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      appendMessage('user', text);
+      addToHistory(text);
+      input.value = '';
+      appendMessage('assistant', '…');
+
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question: text })
+      });
+      const { answer } = await res.json();
+      chatEl.lastChild.querySelector('.text').textContent = answer;
+    });
+
+    loadChat();
+  </script>
+</body>
+</html>
